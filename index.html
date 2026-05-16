@@ -1434,6 +1434,29 @@
         // Load frames
         function loadFrames() {
             let loadedCount = 0;
+            
+            function checkComplete() {
+                const progress = (loadedCount / TOTAL_FRAMES) * 100;
+                progressBar.style.width = progress + '%';
+                progressText.textContent = Math.round(progress) + '%';
+                
+                if (loadedCount === TOTAL_FRAMES) {
+                    frames = Array.from({ length: TOTAL_FRAMES }, (_, idx) => {
+                        const frameImg = new Image();
+                        const num = idx.toString().padStart(2, '0');
+                        frameImg.src = `${FRAME_PATH}${num}${FRAME_EXTENSION}`;
+                        return frameImg;
+                    });
+                    isLoaded = true;
+                    
+                    setTimeout(() => {
+                        loadingScreen.classList.add('hidden');
+                        initCanvas();
+                        setupAnimations();
+                    }, 500);
+                }
+            }
+
             for (let i = 0; i < TOTAL_FRAMES; i++) {
                 const frameNumber = i.toString().padStart(2, '0');
                 const img = new Image();
@@ -1441,29 +1464,12 @@
                 
                 img.onload = () => {
                     loadedCount++;
-                    const progress = (loadedCount / TOTAL_FRAMES) * 100;
-                    progressBar.style.width = progress + '%';
-                    progressText.textContent = Math.round(progress) + '%';
-                    
-                    if (loadedCount === TOTAL_FRAMES) {
-                        frames = Array.from({ length: TOTAL_FRAMES }, (_, idx) => {
-                            const frameImg = new Image();
-                            const num = idx.toString().padStart(2, '0');
-                            frameImg.src = `${FRAME_PATH}${num}${FRAME_EXTENSION}`;
-                            return frameImg;
-                        });
-                        isLoaded = true;
-                        
-                        setTimeout(() => {
-                            loadingScreen.classList.add('hidden');
-                            initCanvas();
-                            setupAnimations();
-                        }, 500);
-                    }
+                    checkComplete();
                 };
                 img.onerror = () => {
                     console.error(`Failed to load frame ${i}`);
                     loadedCount++; // hack to not block loading
+                    checkComplete();
                 };
             }
         }
