@@ -1,0 +1,1695 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MOCHAE - The Geometry of Taste</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;500;600&family=Montserrat:wght@300;400;500;700&family=Playfair+Display:wght@400;500;600&family=Space+Grotesk:wght@300;400;500&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ScrollTrigger.min.js"></script>
+    <script src="https://unpkg.com/@studio-freight/lenis@1.0.32/dist/lenis.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-dark: #2C1E16;
+            --accent-crimson: #990000;
+            --text-offwhite: #f0ece4;
+            --text-muted: #888888;
+        }
+
+        body {
+            font-family: 'Montserrat', sans-serif;
+            background-color: var(--bg-dark);
+            color: var(--text-offwhite);
+            overflow-x: hidden;
+        }
+
+        body::before {
+            content: "";
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background-image: url('images/coffee_bg.png');
+            background-size: cover;
+            background-position: center;
+            opacity: 0.15;
+            z-index: -2;
+            pointer-events: none;
+        }
+
+        /* Loading Screen */
+        #loading-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: var(--bg-dark);
+            z-index: 10000;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            transition: opacity 0.5s ease;
+        }
+
+        #loading-screen.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .loading-text {
+            font-family: 'Playfair Display', serif;
+            font-size: 1.5rem;
+            letter-spacing: 0.3em;
+            margin-bottom: 2rem;
+            color: var(--text-offwhite);
+        }
+
+        .progress-container {
+            width: 300px;
+            height: 2px;
+            background-color: rgba(240, 236, 228, 0.1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .progress-bar {
+            height: 100%;
+            background-color: var(--accent-crimson);
+            width: 0%;
+            transition: width 0.1s ease;
+        }
+
+        .progress-text {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-top: 1rem;
+            letter-spacing: 0.1em;
+        }
+
+        /* Navigation */
+        nav {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            padding: 2rem 4rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 1000;
+            background: linear-gradient(to bottom, rgba(10, 10, 10, 0.9), transparent);
+        }
+
+        .logo {
+            font-family: 'Playfair Display', serif;
+            font-size: 1.5rem;
+            letter-spacing: 0.2em;
+            color: var(--text-offwhite);
+            text-decoration: none;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 3rem;
+        }
+
+        .nav-links a {
+            color: var(--text-offwhite);
+            text-decoration: none;
+            font-size: 0.75rem;
+            letter-spacing: 0.15em;
+            font-weight: 500;
+            transition: color 0.3s ease;
+        }
+
+        .nav-links a:hover {
+            color: var(--accent-crimson);
+        }
+
+        .login-btn {
+            padding: 0.75rem 2rem;
+            border: 1px solid var(--text-offwhite);
+            background-color: transparent;
+            color: var(--text-offwhite);
+            text-decoration: none;
+            font-size: 0.75rem;
+            letter-spacing: 0.15em;
+            font-weight: 700;
+            transition: all 0.3s ease;
+        }
+
+        .login-btn:hover {
+            background-color: var(--text-offwhite);
+            color: var(--bg-dark);
+        }
+
+        /* Animation Section */
+        .animation-section {
+            position: relative;
+            height: 500vh;
+        }
+
+        .canvas-container {
+            position: sticky;
+            top: 0;
+            width: 100%;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-color: var(--bg-dark);
+        }
+
+        canvas {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+        }
+
+        /* Text Overlays */
+        .text-overlay {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.5s ease;
+            z-index: 100;
+            width: 100%;
+            padding: 0 2rem;
+        }
+
+        .text-overlay.active {
+            opacity: 1;
+        }
+
+        .text-overlay h2 {
+            font-family: 'Playfair Display', serif;
+            font-size: clamp(2rem, 5vw, 4rem);
+            font-weight: 400;
+            letter-spacing: 0.1em;
+            margin-bottom: 1rem;
+            color: var(--text-offwhite);
+        }
+
+        .text-overlay p {
+            font-size: clamp(0.875rem, 2vw, 1.125rem);
+            font-weight: 300;
+            letter-spacing: 0.05em;
+            color: var(--text-muted);
+        }
+
+        .specs-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 2rem;
+        }
+
+        .spec-item {
+            text-align: left;
+            max-width: 400px;
+        }
+
+        .spec-item.right {
+            text-align: right;
+        }
+
+        .spec-item h3 {
+            font-family: 'Playfair Display', serif;
+            font-size: 1.5rem;
+            font-weight: 400;
+            letter-spacing: 0.05em;
+            margin-bottom: 0.5rem;
+            color: var(--text-offwhite);
+        }
+
+        .spec-item p {
+            font-size: 0.875rem;
+            font-weight: 300;
+            letter-spacing: 0.05em;
+            color: var(--text-muted);
+        }
+
+        .cta-button {
+            display: inline-block;
+            padding: 1rem 3rem;
+            border: 1px solid var(--text-offwhite);
+            background-color: transparent;
+            color: var(--text-offwhite);
+            text-decoration: none;
+            font-size: 0.75rem;
+            letter-spacing: 0.2em;
+            font-weight: 700;
+            transition: all 0.3s ease;
+            margin-top: 2rem;
+            pointer-events: auto;
+        }
+
+        .cta-button:hover {
+            background-color: var(--text-offwhite);
+            color: var(--bg-dark);
+        }
+
+        /* Film Grain Overlay */
+        .grain-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 9999;
+            opacity: 0.035;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+        }
+
+        /* Vignette Overlay */
+        .vignette-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 9998;
+            background: radial-gradient(ellipse at center, transparent 0%, rgba(10, 10, 10, 0.7) 100%);
+        }
+
+        /* About Section */
+        .about-section {
+            min-height: 100vh;
+            padding: 8rem 4rem;
+            background-color: var(--bg-dark);
+            position: relative;
+        }
+
+        .about-content {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        .section-title {
+            font-family: 'Playfair Display', serif;
+            font-size: clamp(2.5rem, 6vw, 4rem);
+            font-weight: 400;
+            letter-spacing: 0.1em;
+            margin-bottom: 3rem;
+            color: var(--text-offwhite);
+        }
+
+        .about-text {
+            font-size: 1.125rem;
+            font-weight: 300;
+            line-height: 2;
+            letter-spacing: 0.02em;
+            color: var(--text-muted);
+            margin-bottom: 2rem;
+        }
+
+        .about-features {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 3rem;
+            margin-top: 4rem;
+        }
+
+        .feature-item {
+            text-align: center;
+        }
+
+        .feature-icon {
+            font-size: 2rem;
+            margin-bottom: 1rem;
+            color: var(--accent-crimson);
+        }
+
+        .feature-item h4 {
+            font-family: 'Playfair Display', serif;
+            font-size: 1.25rem;
+            font-weight: 400;
+            letter-spacing: 0.05em;
+            margin-bottom: 0.5rem;
+            color: var(--text-offwhite);
+        }
+
+        .feature-item p {
+            font-size: 0.875rem;
+            font-weight: 300;
+            letter-spacing: 0.02em;
+            color: var(--text-muted);
+        }
+
+        /* Hero Section */
+        .hero-section {
+            height: 100vh;
+            background-color: var(--bg-dark);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+            transition: opacity 0.8s ease;
+        }
+
+        .hero-section.fade-out {
+            opacity: 0;
+        }
+
+        .hero-content {
+            text-align: center;
+            z-index: 10;
+        }
+
+        .hero-title {
+            font-family: 'Playfair Display', serif;
+            font-size: clamp(3rem, 8vw, 6rem);
+            font-weight: 600;
+            font-style: italic;
+            letter-spacing: 0.15em;
+            color: var(--text-offwhite);
+            margin-bottom: 2rem;
+            animation: textGlowMove 4s ease-in-out infinite alternate;
+        }
+
+        @keyframes textGlowMove {
+            0% {
+                text-shadow: 0 0 10px rgba(240, 236, 228, 0.1), 0 0 20px rgba(153, 0, 0, 0.05);
+                transform: translateY(0) scale(1);
+            }
+            100% {
+                text-shadow: 0 0 20px rgba(240, 236, 228, 0.4), 0 0 40px rgba(153, 0, 0, 0.2), 0 0 60px rgba(153, 0, 0, 0.1);
+                transform: translateY(-5px) scale(1.02);
+            }
+        }
+
+        .hero-subtitle {
+            font-size: clamp(1rem, 2vw, 1.25rem);
+            font-weight: 300;
+            letter-spacing: 0.1em;
+            color: var(--text-muted);
+        }
+
+        .scroll-indicator {
+            position: absolute;
+            bottom: 3rem;
+            left: 50%;
+            transform: translateX(-50%);
+            animation: bounce 2s infinite;
+        }
+
+        @keyframes bounce {
+            0%, 20%, 50%, 80%, 100% { transform: translateX(-50%) translateY(0); }
+            40% { transform: translateX(-50%) translateY(-10px); }
+            60% { transform: translateX(-50%) translateY(-5px); }
+        }
+
+        /* Hero Divider */
+        .hero-divider {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 4rem;
+            z-index: 20;
+            height: 100px;
+        }
+
+        .divider-line {
+            flex-grow: 1;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(0, 150, 255, 0.8), rgba(0, 150, 255, 0.8), transparent);
+            margin: 0 2rem;
+            box-shadow: 0 0 15px rgba(0, 150, 255, 0.5);
+        }
+
+        .divider-text {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 0.75rem;
+            letter-spacing: 0.2em;
+            color: var(--text-offwhite);
+            text-transform: uppercase;
+        }
+
+        /* Bento Grid Layout */
+        .bento-grid {
+            display: grid;
+            grid-template-columns: repeat(12, 1fr);
+            grid-template-rows: auto;
+            gap: 2rem;
+            padding: 8rem 4rem;
+            background-color: var(--bg-dark);
+        }
+
+        .bento-item {
+            padding: 3rem;
+            background: rgba(153, 0, 0, 0.05);
+            border: 1px solid rgba(153, 0, 0, 0.1);
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+        }
+
+        .bento-item.large {
+            grid-column: span 12;
+            grid-template-columns: 1fr 1fr;
+            display: grid;
+            gap: 3rem;
+            align-items: center;
+        }
+
+        .bento-item.medium {
+            grid-column: span 12;
+            grid-template-columns: 1fr 1fr;
+            display: grid;
+            gap: 3rem;
+            align-items: center;
+        }
+
+        .bento-item.small {
+            grid-column: span 4;
+        }
+
+        .bento-image {
+            width: 100%;
+            height: 400px;
+            object-fit: cover;
+            border-radius: 4px;
+        }
+
+        .bento-content {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .bento-title {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: 2rem;
+            font-weight: 300;
+            letter-spacing: 0.05em;
+            margin-bottom: 1.5rem;
+            color: var(--accent-crimson);
+        }
+
+        .bento-text {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 1rem;
+            line-height: 1.9;
+            color: var(--text-muted);
+        }
+
+        /* Hidden Sections */
+        .hidden-section {
+            display: none;
+            min-height: 100vh;
+            padding: 8rem 4rem;
+            background-color: var(--bg-dark);
+        }
+
+        .hidden-section.active {
+            display: block;
+        }
+
+        .section-back-btn {
+            display: inline-block;
+            margin-bottom: 2rem;
+            color: var(--text-muted);
+            text-decoration: none;
+            font-size: 0.75rem;
+            letter-spacing: 0.1em;
+            transition: color 0.3s ease;
+        }
+
+        .section-back-btn:hover {
+            color: var(--accent-crimson);
+        }
+
+        /* Blog Section */
+        .blog-section {
+            min-height: 100vh;
+            padding: 8rem 4rem;
+            background-color: var(--bg-dark);
+            position: relative;
+        }
+
+        .blog-container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        .blog-form {
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+            margin-bottom: 4rem;
+        }
+
+        .blog-form textarea {
+            background: transparent;
+            border: 1px solid rgba(240, 236, 228, 0.2);
+            padding: 1.5rem;
+            font-family: 'Montserrat', sans-serif;
+            font-size: 1rem;
+            color: var(--text-offwhite);
+            outline: none;
+            transition: border-color 0.3s ease;
+            min-height: 200px;
+            resize: vertical;
+        }
+
+        .blog-form textarea:focus {
+            border-color: var(--accent-crimson);
+        }
+
+        .blog-form textarea::placeholder {
+            color: rgba(240, 236, 228, 0.3);
+        }
+
+        .blog-posts {
+            display: flex;
+            flex-direction: column;
+            gap: 3rem;
+        }
+
+        .blog-post {
+            padding: 2rem;
+            border-left: 2px solid var(--accent-crimson);
+            background: rgba(153, 0, 0, 0.05);
+        }
+
+        .blog-post-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .blog-post-author {
+            font-size: 0.875rem;
+            color: var(--accent-crimson);
+            letter-spacing: 0.1em;
+        }
+
+        .blog-post-date {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            letter-spacing: 0.05em;
+        }
+
+        .blog-post-content {
+            font-size: 1rem;
+            line-height: 1.8;
+            color: var(--text-muted);
+        }
+
+        /* Review Section */
+        .review-section {
+            min-height: 100vh;
+            padding: 8rem 4rem;
+            background-color: var(--bg-dark);
+            position: relative;
+        }
+
+        .review-container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .review-form {
+            max-width: 600px;
+            margin: 0 auto 4rem;
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+        }
+
+        .star-rating {
+            display: flex;
+            gap: 0.5rem;
+            justify-content: center;
+        }
+
+        .star-rating button {
+            background: transparent;
+            border: none;
+            font-size: 2rem;
+            color: rgba(240, 236, 228, 0.3);
+            cursor: pointer;
+            transition: color 0.3s ease;
+        }
+
+        .star-rating button:hover,
+        .star-rating button.active {
+            color: var(--accent-crimson);
+        }
+
+        .reviews-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 2rem;
+        }
+
+        .review-card {
+            padding: 2rem;
+            background: rgba(153, 0, 0, 0.05);
+            border: 1px solid rgba(153, 0, 0, 0.1);
+        }
+
+        .review-stars {
+            color: var(--accent-crimson);
+            font-size: 1.25rem;
+            margin-bottom: 1rem;
+        }
+
+        .review-text {
+            font-size: 0.875rem;
+            line-height: 1.6;
+            color: var(--text-muted);
+            margin-bottom: 1rem;
+        }
+
+        .review-author {
+            font-size: 0.75rem;
+            color: var(--text-offwhite);
+            letter-spacing: 0.1em;
+        }
+
+        /* Login Modal */
+        .login-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(10, 10, 10, 0.95);
+            z-index: 10001;
+            display: none;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .login-modal.active {
+            display: flex;
+        }
+
+        .login-modal-content {
+            max-width: 500px;
+            width: 90%;
+            padding: 3rem;
+            background: rgba(20, 20, 20, 0.8);
+            border: 1px solid rgba(153, 0, 0, 0.3);
+            position: relative;
+        }
+
+        .modal-close {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            background: transparent;
+            border: none;
+            color: var(--text-muted);
+            font-size: 1.5rem;
+            cursor: pointer;
+            transition: color 0.3s ease;
+        }
+
+        .modal-close:hover {
+            color: var(--accent-crimson);
+        }
+
+
+        .login-form {
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .form-group label {
+            font-size: 0.75rem;
+            letter-spacing: 0.15em;
+            color: var(--text-muted);
+        }
+
+        .form-group input {
+            background: transparent;
+            border: none;
+            border-bottom: 1px solid rgba(240, 236, 228, 0.2);
+            padding: 1rem 0;
+            font-family: 'Montserrat', sans-serif;
+            font-size: 1rem;
+            color: var(--text-offwhite);
+            outline: none;
+            transition: border-color 0.3s ease;
+        }
+
+        .form-group input:focus {
+            border-color: var(--accent-crimson);
+        }
+
+        .form-group input::placeholder {
+            color: rgba(240, 236, 228, 0.3);
+        }
+
+        .login-button {
+            padding: 1rem 2rem;
+            background-color: transparent;
+            border: 1px solid var(--text-offwhite);
+            color: var(--text-offwhite);
+            font-family: 'Montserrat', sans-serif;
+            font-size: 0.75rem;
+            letter-spacing: 0.2em;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 1rem;
+        }
+
+        .login-button:hover {
+            background-color: var(--text-offwhite);
+            color: var(--bg-dark);
+        }
+
+        .form-footer {
+            text-align: center;
+            margin-top: 2rem;
+        }
+
+        .form-footer a {
+            color: var(--text-muted);
+            font-size: 0.75rem;
+            letter-spacing: 0.1em;
+            text-decoration: none;
+            transition: color 0.3s ease;
+        }
+
+        .form-footer a:hover {
+            color: var(--accent-crimson);
+        }
+
+        /* Footer */
+        footer {
+            padding: 4rem;
+            background-color: var(--bg-dark);
+            border-top: 1px solid rgba(240, 236, 228, 0.05);
+            text-align: center;
+        }
+
+        .footer-content {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .footer-logo {
+            font-family: 'Playfair Display', serif;
+            font-size: 1.25rem;
+            letter-spacing: 0.2em;
+            margin-bottom: 2rem;
+            color: var(--text-offwhite);
+        }
+
+        .footer-links {
+            display: flex;
+            justify-content: center;
+            gap: 3rem;
+            margin-bottom: 2rem;
+        }
+
+        .footer-links a {
+            color: var(--text-muted);
+            text-decoration: none;
+            font-size: 0.75rem;
+            letter-spacing: 0.1em;
+            transition: color 0.3s ease;
+        }
+
+        .footer-links a:hover {
+            color: var(--accent-crimson);
+        }
+
+        .footer-copyright {
+            font-size: 0.625rem;
+            letter-spacing: 0.1em;
+            color: rgba(240, 236, 228, 0.3);
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            nav {
+                padding: 1rem;
+                flex-direction: column;
+                gap: 1rem;
+            }
+
+            .nav-links {
+                gap: 1rem;
+                flex-wrap: wrap;
+                justify-content: center;
+            }
+
+            .hero-divider {
+                padding: 0 1rem;
+            }
+
+            .about-section,
+            .image-section,
+            .blog-section,
+            .review-section,
+            .bento-grid {
+                padding: 4rem 1.5rem;
+            }
+
+            .bento-item.large,
+            .bento-item.medium {
+                grid-template-columns: 1fr;
+                gap: 2rem;
+            }
+
+            .bento-image {
+                height: 250px;
+            }
+
+            .about-features,
+            .reviews-grid {
+                grid-template-columns: 1fr;
+                gap: 2rem;
+            }
+
+            .specs-container {
+                flex-direction: column;
+                gap: 2rem;
+            }
+
+            .spec-item,
+            .spec-item.right {
+                text-align: center;
+                max-width: 100%;
+            }
+
+            .footer-links {
+                flex-direction: column;
+                gap: 1.5rem;
+                align-items: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Three.js Background -->
+    <canvas id="three-canvas" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 0;"></canvas>
+
+    <!-- Loading Screen -->
+    <div id="loading-screen">
+        <div class="loading-text">MOCHAE</div>
+        <div class="progress-container">
+            <div class="progress-bar" id="progress-bar"></div>
+        </div>
+        <div class="progress-text" id="progress-text">0%</div>
+    </div>
+
+    <!-- Overlays -->
+    <div class="grain-overlay"></div>
+    <div class="vignette-overlay"></div>
+
+    <!-- Navigation -->
+    <nav>
+        <a href="#" class="logo">MOCHAE</a>
+        <div class="nav-links">
+            <a href="#hero">Home</a>
+            <a href="#animation">Experience</a>
+            <a href="#about">About</a>
+            <a href="#blog">Blog</a>
+            <a href="#reviews">Reviews</a>
+            <a href="#" id="privacy-link">Privacy</a>
+            <a href="#" id="terms-link">Terms</a>
+            <a href="#" id="contact-link">Contact</a>
+            <button class="login-btn" id="login-btn">LOGIN</button>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="hero-section" id="hero">
+        <div class="hero-content">
+            <h1 class="hero-title">MOCHAE</h1>
+            <p class="hero-subtitle">The Geometry of Taste</p>
+        </div>
+        <div class="scroll-indicator">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#f0ece4" stroke-width="1">
+                <path d="M12 5v14M5 12l7 7 7-7"/>
+            </svg>
+        </div>
+        <div class="hero-divider" id="hero-divider">
+            <span class="divider-text left">Liv I</span>
+            <div class="divider-line"></div>
+            <span class="divider-text right">Auf Hollit</span>
+        </div>
+    </section>
+
+    <!-- Animation Section -->
+    <section class="animation-section" id="animation">
+        <div class="canvas-container">
+            <canvas id="animation-canvas"></canvas>
+            
+            <!-- Text Overlays -->
+            <div class="text-overlay" id="overlay-headline" data-scroll-start="0" data-scroll-end="20">
+                <h2>MOCHAE: The Geometry of Taste</h2>
+            </div>
+            
+            <div class="text-overlay" id="overlay-mid" data-scroll-start="25" data-scroll-end="45">
+                <p>The precision of a vacuum seal.</p>
+            </div>
+            
+            <div class="text-overlay" id="overlay-specs" data-scroll-start="70" data-scroll-end="90">
+                <div class="specs-container">
+                    <div class="spec-item">
+                        <h3>Weighted walnut base.</h3>
+                    </div>
+                    <div class="spec-item right">
+                        <h3>Deep Crimson Red (#990000) Gasket.</h3>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="text-overlay" id="overlay-cta" data-scroll-start="88" data-scroll-end="100">
+                <a href="#login" class="cta-button">RESERVE THE RITUAL</a>
+            </div>
+        </div>
+    </section>
+
+    <!-- About Section -->
+    <section class="about-section" id="about">
+        <div class="about-content">
+            <h2 class="section-title">The Art of Preservation</h2>
+            <p class="about-text">
+                MOCHAE represents the intersection of precision engineering and sensory experience. 
+                Every curve, every material, every mechanism has been meticulously considered to 
+                preserve the delicate aromatics that define exceptional coffee.
+            </p>
+            <p class="about-text">
+                Our vacuum-sealed brewing system locks in freshness at the molecular level, 
+                ensuring that each cup delivers the same intensity and complexity as the moment 
+                the beans were roasted.
+            </p>
+            
+            <div class="about-features">
+                <div class="feature-item">
+                    <div class="feature-icon">◈</div>
+                    <h4>Vacuum Seal</h4>
+                    <p>Airtight preservation technology</p>
+                </div>
+                <div class="feature-item">
+                    <div class="feature-icon">◈</div>
+                    <h4>Precision Craft</h4>
+                    <p>Hand-fitted walnut components</p>
+                </div>
+                <div class="feature-item">
+                    <div class="feature-icon">◈</div>
+                    <h4>Thermal Control</h4>
+                    <p>Optimal temperature retention</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Bento Grid Section -->
+    <section class="bento-grid">
+        <div class="bento-item large">
+            <img src="image 1/ChatGPT Image May 16, 2026, 12_31_15 PM.png" alt="MOCHAE Product" class="bento-image">
+            <div class="bento-content">
+                <h3 class="bento-title">The Philosophy of the Pour</h3>
+                <p class="bento-text">Mochae isn't just a container; it is a dedicated environment for the world's finest beans. Born from a marriage of Blue Bottle's artisanal precision and Vitsœ's functional minimalism, the Mochae system treats coffee as a high-stakes ritual. The cylindrical fluted glass isn't just for aesthetics—it's designed to diffuse light, protecting the delicate oils of the dark roast from UV degradation, ensuring that the first cup of the month is as vibrant as the last.</p>
+            </div>
+        </div>
+        <div class="bento-item medium">
+            <img src="image 2/ChatGPT Image May 16, 2026, 12_42_37 PM.png" alt="MOCHAE Detail" class="bento-image" style="height: 300px;">
+            <div class="bento-content">
+                <h3 class="bento-title">Engineering the Aroma</h3>
+                <p class="bento-text">The heart of the Mochae experience lies in the Signature Crimson Gasket. This medical-grade silicone seal creates a total vacuum, locking in the volatile aromatic compounds that usually escape the moment a bag is opened. Paired with the integrated beige ceramic pressure-seal lid, the system provides a tactile, mechanical satisfaction that turns the simple act of opening a jar into a sensory event.</p>
+            </div>
+        </div>
+        <div class="bento-item medium">
+            <div class="bento-content">
+                <h3 class="bento-title">Why Choose Mochae?</h3>
+                <p class="bento-text">In a world of disposable plastic and thin glass, Mochae stands as a permanent fixture on the walnut-clad countertops of the modern connoisseur. The weighted base ensures absolute stability during the brewing process, while the vertical ribbing provides a natural, non-slip grip. By choosing Mochae, you are investing in a lifetime tool that honors the journey of the bean from the shade of the canopy to the heat of the mug.</p>
+            </div>
+            <img src="image 3/hero_shot.jpg" alt="MOCHAE Base" class="bento-image">
+        </div>
+    </section>
+
+    <!-- Blog Section -->
+    <section class="blog-section" id="blog">
+        <div class="blog-container">
+            <h2 class="section-title">Community Journal</h2>
+            
+            <form class="blog-form" id="blog-form">
+                <div class="form-group">
+                    <label for="blog-author">YOUR NAME</label>
+                    <input type="text" id="blog-author" name="author" placeholder="Enter your name" required>
+                </div>
+                <div class="form-group">
+                    <label for="blog-content">SHARE YOUR EXPERIENCE</label>
+                    <textarea id="blog-content" name="content" placeholder="Tell us about your MOCHAE experience..." required></textarea>
+                </div>
+                <button type="submit" class="login-button">PUBLISH POST</button>
+            </form>
+            
+            <div class="blog-posts" id="blog-posts">
+                <div class="blog-post">
+                    <div class="blog-post-header">
+                        <span class="blog-post-author">Sarah Chen</span>
+                        <span class="blog-post-date">May 15, 2026</span>
+                    </div>
+                    <p class="blog-post-content">The vacuum seal technology is revolutionary. My coffee stays fresh for weeks, and the ritual of brewing has become a meditative experience I look forward to every morning.</p>
+                </div>
+                <div class="blog-post">
+                    <div class="blog-post-header">
+                        <span class="blog-post-author">Marcus Williams</span>
+                        <span class="blog-post-date">May 12, 2026</span>
+                    </div>
+                    <p class="blog-post-content">The walnut base adds such elegance to my kitchen. It's not just a coffee maker—it's a piece of art that transforms the entire brewing experience into something special.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Review Section -->
+    <section class="review-section" id="reviews">
+        <div class="review-container">
+            <h2 class="section-title">Customer Reviews</h2>
+            
+            <form class="review-form" id="review-form">
+                <div class="form-group">
+                    <label for="review-author">YOUR NAME</label>
+                    <input type="text" id="review-author" name="author" placeholder="Enter your name" required>
+                </div>
+                <div class="form-group">
+                    <label>RATE YOUR EXPERIENCE</label>
+                    <div class="star-rating" id="star-rating">
+                        <button type="button" data-rating="1">★</button>
+                        <button type="button" data-rating="2">★</button>
+                        <button type="button" data-rating="3">★</button>
+                        <button type="button" data-rating="4">★</button>
+                        <button type="button" data-rating="5">★</button>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="review-text">YOUR REVIEW</label>
+                    <textarea id="review-text" name="review" placeholder="Share your thoughts..." required></textarea>
+                </div>
+                <button type="submit" class="login-button">SUBMIT REVIEW</button>
+            </form>
+            
+            <div class="reviews-grid" id="reviews-grid">
+                <div class="review-card">
+                    <div class="review-stars">★★★★★</div>
+                    <p class="review-text">Absolutely stunning design. The attention to detail is unmatched in the coffee industry.</p>
+                    <p class="review-author">— JAMES THOMPSON</p>
+                </div>
+                <div class="review-card">
+                    <div class="review-stars">★★★★★</div>
+                    <p class="review-text">The vacuum seal actually works. My coffee tastes exactly as it did when I first opened the bag.</p>
+                    <p class="review-author">— EMILY RODRIGUEZ</p>
+                </div>
+                <div class="review-card">
+                    <div class="review-stars">★★★★☆</div>
+                    <p class="review-text">Beautiful piece of equipment. The walnut base is heavier and more substantial than I expected.</p>
+                    <p class="review-author">— DAVID PARK</p>
+                </div>
+                <div class="review-card">
+                    <div class="review-stars">★★★★★</div>
+                    <p class="review-text">Worth every penny. This is what luxury coffee equipment should be.</p>
+                    <p class="review-author">— ANNA KOWALSKI</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Login Modal -->
+    <div class="login-modal" id="login-modal">
+        <div class="login-modal-content">
+            <button class="modal-close" id="modal-close">×</button>
+            <h2 class="section-title" style="text-align: center; font-size: 2rem;">Member Access</h2>
+            <form class="login-form" id="login-form">
+                <div class="form-group">
+                    <label for="email">EMAIL</label>
+                    <input type="email" id="email" name="email" placeholder="your@email.com" required>
+                </div>
+                <div class="form-group">
+                    <label for="password">PASSWORD</label>
+                    <input type="password" id="password" name="password" placeholder="••••••••" required>
+                </div>
+                <button type="submit" class="login-button">SIGN IN</button>
+            </form>
+            <div class="form-footer">
+                <a href="#">Create an account</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Privacy Section -->
+    <section class="hidden-section" id="privacy-section">
+        <a href="#" class="section-back-btn" id="privacy-back">← BACK TO HOME</a>
+        <div class="about-content">
+            <h2 class="section-title">Privacy Policy</h2>
+            <p class="about-text">
+                At MOCHAE, we take your privacy seriously. This policy outlines how we collect, use, and protect your personal information when you use our website and services.
+            </p>
+            <p class="about-text">
+                <strong>Information Collection:</strong> We collect information you provide directly, such as when you create an account, submit a review, or write a blog post. This may include your name, email address, and any content you submit.
+            </p>
+            <p class="about-text">
+                <strong>Use of Information:</strong> We use your information to provide and improve our services, communicate with you, and ensure the security of our platform. We do not sell your personal information to third parties.
+            </p>
+            <p class="about-text">
+                <strong>Data Security:</strong> We implement appropriate security measures to protect your personal information against unauthorized access, alteration, or disclosure.
+            </p>
+            <p class="about-text">
+                <strong>Contact:</strong> If you have questions about this privacy policy, please contact us through the Contact section of our website.
+            </p>
+        </div>
+    </section>
+
+    <!-- Terms Section -->
+    <section class="hidden-section" id="terms-section">
+        <a href="#" class="section-back-btn" id="terms-back">← BACK TO HOME</a>
+        <div class="about-content">
+            <h2 class="section-title">Terms of Service</h2>
+            <p class="about-text">
+                By accessing and using the MOCHAE website, you agree to be bound by these Terms of Service. Please read them carefully.
+            </p>
+            <p class="about-text">
+                <strong>Use of Service:</strong> You may use our website for lawful purposes only. You agree not to use the service for any illegal purpose or in violation of any local, state, national, or international law.
+            </p>
+            <p class="about-text">
+                <strong>User Content:</strong> By submitting content (reviews, blog posts, comments), you grant MOCHAE a non-exclusive, royalty-free license to use, display, and distribute such content.
+            </p>
+            <p class="about-text">
+                <strong>Product Information:</strong> All product descriptions, images, and specifications are provided for informational purposes. We reserve the right to make changes without notice.
+            </p>
+            <p class="about-text">
+                <strong>Limitation of Liability:</strong> MOCHAE shall not be liable for any indirect, incidental, special, or consequential damages arising from use of our products or services.
+            </p>
+        </div>
+    </section>
+
+    <!-- Contact Section -->
+    <section class="hidden-section" id="contact-section">
+        <a href="#" class="section-back-btn" id="contact-back">← BACK TO HOME</a>
+        <div class="about-content">
+            <h2 class="section-title">Contact Us</h2>
+            <p class="about-text">
+                We'd love to hear from you. Whether you have questions about our products, need support, or want to share your experience, we're here to help.
+            </p>
+            <form class="login-form" id="contact-form">
+                <div class="form-group">
+                    <label for="contact-name">NAME</label>
+                    <input type="text" id="contact-name" name="name" placeholder="Your name" required>
+                </div>
+                <div class="form-group">
+                    <label for="contact-email">EMAIL</label>
+                    <input type="email" id="contact-email" name="email" placeholder="your@email.com" required>
+                </div>
+                <div class="form-group">
+                    <label for="contact-message">MESSAGE</label>
+                    <textarea id="contact-message" name="message" placeholder="How can we help?" required style="min-height: 150px; background: transparent; border: 1px solid rgba(240, 236, 228, 0.2); padding: 1.5rem; font-family: 'Montserrat', sans-serif; font-size: 1rem; color: var(--text-offwhite); outline: none; transition: border-color 0.3s ease; resize: vertical;"></textarea>
+                </div>
+                <button type="submit" class="login-button">SEND MESSAGE</button>
+            </form>
+            <div style="margin-top: 3rem; text-align: center;">
+                <p class="about-text" style="text-align: center;">
+                    <strong>Email:</strong> hello@mochae.com<br>
+                    <strong>Phone:</strong> +1 (555) 123-4567<br>
+                    <strong>Address:</strong> 123 Artisan Way, San Francisco, CA 94102
+                </p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer>
+        <div class="footer-content">
+            <div class="footer-logo">MOCHAE</div>
+            <div class="footer-links">
+                <a href="#" id="footer-privacy">Privacy</a>
+                <a href="#" id="footer-terms">Terms</a>
+                <a href="#" id="footer-contact">Contact</a>
+            </div>
+            <div class="footer-copyright">© 2026 MOCHAE. All rights reserved.</div>
+        </div>
+    </footer>
+
+    <script>
+        // Configuration
+        const TOTAL_FRAMES = 40;
+        const FRAME_PATH = 'images/frame_';
+        const FRAME_EXTENSION = '_delay-0.011s.png';
+
+        // Elements
+        const canvas = document.getElementById('animation-canvas');
+        const ctx = canvas.getContext('2d');
+        const loadingScreen = document.getElementById('loading-screen');
+        const progressBar = document.getElementById('progress-bar');
+        const progressText = document.getElementById('progress-text');
+
+        // State
+        let frames = [];
+        let isLoaded = false;
+        
+        // Lenis Smooth Scrolling
+        const lenis = new Lenis({
+            duration: 1.2,
+            easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
+            direction: 'vertical',
+            gestureDirection: 'vertical',
+            smooth: true,
+            mouseMultiplier: 1,
+            smoothTouch: false,
+            touchMultiplier: 2,
+            infinite: false,
+        });
+
+        // Get scroll value
+        lenis.on('scroll', ScrollTrigger.update);
+
+        gsap.ticker.add((time)=>{
+            lenis.raf(time * 1000);
+        });
+
+        gsap.ticker.lagSmoothing(0);
+
+        // Three.js Background Particles (Galaxy)
+        const initThreeJS = () => {
+            const threeCanvas = document.getElementById('three-canvas');
+            const scene = new THREE.Scene();
+            scene.fog = new THREE.FogExp2(0x2C1E16, 0.0015);
+            const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            const renderer = new THREE.WebGLRenderer({ canvas: threeCanvas, alpha: true, antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
+            // Galaxy Particles
+            const particlesGeometry = new THREE.BufferGeometry();
+            const particlesCount = 10000;
+            const posArray = new Float32Array(particlesCount * 3);
+            const colorArray = new Float32Array(particlesCount * 3);
+            
+            const branches = 3;
+            const radius = 500;
+
+            for(let i = 0; i < particlesCount; i++) {
+                const r = Math.random() * radius;
+                const spinAngle = r * 0.02;
+                const branchAngle = ((i % branches) / branches) * Math.PI * 2;
+                
+                const randomX = Math.pow(Math.random(), 3) * (Math.random() < 0.5 ? 1 : -1) * 50;
+                const randomY = Math.pow(Math.random(), 3) * (Math.random() < 0.5 ? 1 : -1) * 50;
+                const randomZ = Math.pow(Math.random(), 3) * (Math.random() < 0.5 ? 1 : -1) * 50;
+
+                posArray[i * 3] = Math.cos(branchAngle + spinAngle) * r + randomX;
+                posArray[i * 3 + 1] = randomY;
+                posArray[i * 3 + 2] = Math.sin(branchAngle + spinAngle) * r + randomZ;
+
+                const mixedColor = new THREE.Color();
+                mixedColor.lerpColors(new THREE.Color(0xd4af37), new THREE.Color(0x990000), Math.random());
+                
+                colorArray[i * 3] = mixedColor.r;
+                colorArray[i * 3 + 1] = mixedColor.g;
+                colorArray[i * 3 + 2] = mixedColor.b;
+            }
+
+            particlesGeometry.setAttribute('position', new THREE.BufferAttribute(posArray, 3));
+            particlesGeometry.setAttribute('color', new THREE.BufferAttribute(colorArray, 3));
+
+            const material = new THREE.PointsMaterial({
+                size: 2.0,
+                vertexColors: true,
+                transparent: true,
+                opacity: 0.3,
+                blending: THREE.AdditiveBlending,
+                depthWrite: false
+            });
+
+            const particlesMesh = new THREE.Points(particlesGeometry, material);
+            // Tilt galaxy slightly
+            particlesMesh.rotation.x = Math.PI * 0.15;
+            particlesMesh.rotation.z = Math.PI * 0.1;
+            scene.add(particlesMesh);
+
+            camera.position.z = 300;
+            camera.position.y = 100;
+
+            let mouseX = 0;
+            let mouseY = 0;
+
+            document.addEventListener('mousemove', (e) => {
+                mouseX = (e.clientX / window.innerWidth) - 0.5;
+                mouseY = (e.clientY / window.innerHeight) - 0.5;
+            });
+
+            const animateParticles = () => {
+                requestAnimationFrame(animateParticles);
+                particlesMesh.rotation.y += 0.0005;
+                
+                camera.position.x += (mouseX * 100 - camera.position.x) * 0.05;
+                camera.position.y += (-mouseY * 100 + 100 - camera.position.y) * 0.05;
+                camera.lookAt(scene.position);
+
+                renderer.render(scene, camera);
+            };
+            animateParticles();
+
+            window.addEventListener('resize', () => {
+                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(window.innerWidth, window.innerHeight);
+            });
+        };
+
+        // Initialize canvas sizing
+        function initCanvas() {
+            const dpr = window.devicePixelRatio || 1;
+            canvas.width = window.innerWidth * dpr;
+            canvas.height = window.innerHeight * dpr;
+            canvas.style.width = window.innerWidth + 'px';
+            canvas.style.height = window.innerHeight + 'px';
+            ctx.scale(dpr, dpr);
+            if (isLoaded) {
+                renderFrame(proxy.frame);
+            }
+        }
+
+        // Object to hold frame value for GSAP Tweening
+        const proxy = { frame: TOTAL_FRAMES - 1 };
+
+        function renderFrame(index) {
+            if (!isLoaded || !frames[index]) return;
+            const img = frames[index];
+            const dpr = window.devicePixelRatio || 1;
+            const canvasWidth = window.innerWidth;
+            const canvasHeight = window.innerHeight;
+            
+            const imgRatio = img.width / img.height;
+            const canvasRatio = canvasWidth / canvasHeight;
+            
+            let drawWidth, drawHeight, drawX, drawY;
+            
+            if (imgRatio > canvasRatio) {
+                drawHeight = canvasHeight;
+                drawWidth = canvasHeight * imgRatio;
+                drawX = (canvasWidth - drawWidth) / 2;
+                drawY = 0;
+            } else {
+                drawWidth = canvasWidth;
+                drawHeight = canvasWidth / imgRatio;
+                drawX = 0;
+                drawY = (canvasHeight - drawHeight) / 2;
+            }
+            
+            ctx.clearRect(0, 0, canvasWidth, canvasHeight);
+            ctx.drawImage(img, drawX, drawY, drawWidth, drawHeight);
+        }
+
+        // Load frames
+        function loadFrames() {
+            let loadedCount = 0;
+            for (let i = 0; i < TOTAL_FRAMES; i++) {
+                const frameNumber = i.toString().padStart(2, '0');
+                const img = new Image();
+                img.src = `${FRAME_PATH}${frameNumber}${FRAME_EXTENSION}`;
+                
+                img.onload = () => {
+                    loadedCount++;
+                    const progress = (loadedCount / TOTAL_FRAMES) * 100;
+                    progressBar.style.width = progress + '%';
+                    progressText.textContent = Math.round(progress) + '%';
+                    
+                    if (loadedCount === TOTAL_FRAMES) {
+                        frames = Array.from({ length: TOTAL_FRAMES }, (_, idx) => {
+                            const frameImg = new Image();
+                            const num = idx.toString().padStart(2, '0');
+                            frameImg.src = `${FRAME_PATH}${num}${FRAME_EXTENSION}`;
+                            return frameImg;
+                        });
+                        isLoaded = true;
+                        
+                        setTimeout(() => {
+                            loadingScreen.classList.add('hidden');
+                            initCanvas();
+                            setupAnimations();
+                        }, 500);
+                    }
+                };
+                img.onerror = () => {
+                    console.error(`Failed to load frame ${i}`);
+                    loadedCount++; // hack to not block loading
+                };
+            }
+        }
+
+        function setupAnimations() {
+            // Register ScrollTrigger
+            gsap.registerPlugin(ScrollTrigger);
+
+            // Frame animation in reverse (from 39 down to 0)
+            gsap.to(proxy, {
+                frame: 0,
+                snap: "frame",
+                ease: "none",
+                scrollTrigger: {
+                    trigger: ".animation-section",
+                    start: "top top",
+                    end: "bottom bottom",
+                    scrub: 0.5,
+                },
+                onUpdate: () => renderFrame(proxy.frame)
+            });
+
+            // Text Overlays Animations
+            const overlays = [
+                { id: "#overlay-headline", start: 0, end: 20 },
+                { id: "#overlay-mid", start: 25, end: 45 },
+                { id: "#overlay-specs", start: 70, end: 90 },
+                { id: "#overlay-cta", start: 88, end: 100 }
+            ];
+
+            overlays.forEach(overlay => {
+                const el = document.querySelector(overlay.id);
+                // Calculate trigger positions based on container
+                gsap.to(el, {
+                    opacity: 1,
+                    ease: "none",
+                    scrollTrigger: {
+                        trigger: ".animation-section",
+                        start: `${overlay.start}% top`,
+                        end: `${overlay.start + 5}% top`,
+                        scrub: true,
+                    }
+                });
+                
+                gsap.to(el, {
+                    opacity: 0,
+                    ease: "none",
+                    scrollTrigger: {
+                        trigger: ".animation-section",
+                        start: `${overlay.end - 5}% top`,
+                        end: `${overlay.end}% top`,
+                        scrub: true,
+                    }
+                });
+            });
+
+            // Hero fade out
+            gsap.to(".hero-content, .scroll-indicator", {
+                opacity: 0,
+                y: -50,
+                scrollTrigger: {
+                    trigger: "#hero",
+                    start: "top top",
+                    end: "bottom top",
+                    scrub: true
+                }
+            });
+
+            // Hero Divider Parallax
+            gsap.to("#hero-divider", {
+                y: -150,
+                opacity: 0,
+                scrollTrigger: {
+                    trigger: "#hero",
+                    start: "top top",
+                    end: "bottom top",
+                    scrub: true
+                }
+            });
+        }
+
+        // Logic & Event Handlers
+        window.addEventListener('resize', () => {
+            initCanvas();
+        });
+
+        // Modal
+        const loginModal = document.getElementById('login-modal');
+        function openModal() {
+            loginModal.style.display = 'flex';
+            gsap.fromTo(loginModal, { opacity: 0 }, { opacity: 1, duration: 0.3 });
+            gsap.fromTo('.login-modal-content', { scale: 0.9, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.3, delay: 0.1 });
+        }
+        function closeModal() {
+            gsap.to(loginModal, { opacity: 0, duration: 0.3, onComplete: () => { loginModal.style.display = 'none'; } });
+        }
+
+        document.getElementById('login-btn').addEventListener('click', (e) => { e.preventDefault(); openModal(); });
+        document.getElementById('modal-close').addEventListener('click', closeModal);
+        loginModal.addEventListener('click', (e) => { if (e.target === loginModal) closeModal(); });
+
+        document.getElementById('login-form').addEventListener('submit', (e) => {
+            e.preventDefault();
+            alert('Welcome back to the Ritual.');
+            closeModal();
+        });
+
+        // Blog
+        document.getElementById('blog-form').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const author = document.getElementById('blog-author').value;
+            const content = document.getElementById('blog-content').value;
+            if (author && content) {
+                const blogPosts = document.getElementById('blog-posts');
+                const newPost = document.createElement('div');
+                newPost.className = 'blog-post';
+                newPost.style.opacity = '0';
+                newPost.innerHTML = `
+                    <div class="blog-post-header">
+                        <span class="blog-post-author">${author}</span>
+                        <span class="blog-post-date">Just now</span>
+                    </div>
+                    <p class="blog-post-content">${content}</p>
+                `;
+                blogPosts.insertBefore(newPost, blogPosts.firstChild);
+                gsap.to(newPost, { opacity: 1, y: -10, duration: 0.5 });
+                document.getElementById('blog-form').reset();
+            }
+        });
+
+        // Reviews
+        let currentRating = 5;
+        document.getElementById('star-rating').addEventListener('click', (e) => {
+            if (e.target.dataset.rating) {
+                currentRating = parseInt(e.target.dataset.rating);
+                document.querySelectorAll('.star-rating button').forEach(btn => {
+                    btn.classList.toggle('active', parseInt(btn.dataset.rating) <= currentRating);
+                });
+            }
+        });
+
+        document.getElementById('review-form').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const author = document.getElementById('review-author').value;
+            const review = document.getElementById('review-text').value;
+            if (author && review) {
+                const reviewsGrid = document.getElementById('reviews-grid');
+                const newReview = document.createElement('div');
+                newReview.className = 'review-card';
+                newReview.style.opacity = '0';
+                const stars = '★'.repeat(currentRating) + '☆'.repeat(5 - currentRating);
+                newReview.innerHTML = `
+                    <div class="review-stars">${stars}</div>
+                    <p class="review-text">${review}</p>
+                    <p class="review-author">— ${author.toUpperCase()}</p>
+                `;
+                reviewsGrid.insertBefore(newReview, reviewsGrid.firstChild);
+                gsap.to(newReview, { opacity: 1, scale: 1.05, duration: 0.5, yoyo: true, repeat: 1 });
+                document.getElementById('review-form').reset();
+                document.querySelectorAll('.star-rating button').forEach(btn => btn.classList.remove('active'));
+                currentRating = 5;
+            }
+        });
+
+        // Navigation for Hidden Sections
+        function showSection(sectionId) {
+            document.querySelectorAll('section:not(.hidden-section)').forEach(section => {
+                section.style.display = 'none';
+            });
+            document.querySelectorAll('.hidden-section').forEach(section => {
+                section.classList.remove('active');
+                section.style.opacity = 0;
+            });
+            const target = document.getElementById(sectionId);
+            target.classList.add('active');
+            gsap.to(target, { opacity: 1, duration: 0.5 });
+            window.scrollTo(0, 0);
+        }
+
+        function showHome() {
+            document.querySelectorAll('.hidden-section').forEach(section => {
+                section.classList.remove('active');
+            });
+            document.querySelectorAll('section:not(.hidden-section)').forEach(section => {
+                section.style.display = '';
+            });
+            window.scrollTo(0, 0);
+        }
+
+        // Nav bindings
+        ['privacy', 'terms', 'contact'].forEach(id => {
+            document.getElementById(`${id}-link`).addEventListener('click', (e) => { e.preventDefault(); showSection(`${id}-section`); });
+            document.getElementById(`footer-${id}`).addEventListener('click', (e) => { e.preventDefault(); showSection(`${id}-section`); });
+            document.getElementById(`${id}-back`).addEventListener('click', (e) => { e.preventDefault(); showHome(); });
+        });
+
+        document.getElementById('contact-form').addEventListener('submit', (e) => {
+            e.preventDefault();
+            alert('Thank you for your message! We will get back to you soon.');
+            document.getElementById('contact-form').reset();
+        });
+
+        // Smooth scroll for nav
+        document.querySelectorAll('a[href^="#"]:not(.cta-button):not([id])').forEach(anchor => {
+            anchor.addEventListener('click', function(e) {
+                e.preventDefault();
+                const href = this.getAttribute('href');
+                if (href && href !== '#') {
+                    const target = document.querySelector(href);
+                    if (target) {
+                        lenis.scrollTo(target);
+                    }
+                }
+            });
+        });
+        
+        document.querySelector('.cta-button').addEventListener('click', (e) => {
+            e.preventDefault();
+            openModal();
+        });
+
+        // Init
+        window.addEventListener('load', () => {
+            initThreeJS();
+            loadFrames();
+        });
+    </script>
+</body>
+</html>
